@@ -1,0 +1,178 @@
+---
+title: "Regular Expressions"
+format:
+  html:
+    code-fold: true
+jupyter: python3
+---
+
+Going to use regular expressions to clean text. Three main goals need to be as correct, short, and efficient as possible. 
+
+## Symbols
+
+- `.`: Any character
+- `^`: At the start of a string 
+- `$`: At the end of a string 
+- `[]`: Contains a set of 
+- `[^]`: Set negation (does not include)
+- `|`: Or 
+- `()`: Grouping (Capturing Group)
+- `*`: 0 or more (Any amount of characters)
+- `+`: 1 or more
+- `?`: 0 or 1 (Non-greedy operator, if you find it 0 or 1 times, stop)
+- `{n}`: Exactly n times
+- `{n,}`: n or more times
+- `{n,m}`: n to m times 
+- `\`: Escape character 
+- `\d`: digit
+- `\D`: not a digit
+- `\w`: word character 
+- `\W`: not a word character
+- `\s`: whitespace
+- `\S`: Not whitespace
+
+### Lookarounds
+
+- `(?=)`: Positive lookahead
+- `(?!)`: Negative lookahead
+- `(?<=)`: Positive lookbehind
+- `(?<!)`: Negative lookbehind
+
+
+## Functions
+
+### re
+
+```{python}
+#| eval: false
+import re
+
+string = '''
+Lil Baby helped you get your lingo up (What?)
+21 gave you false street cred
+Thug made you feel like you a slime in your head (Ayy, what?)
+Quavo said you can be from Northside (What?)
+2 Chainz say you good, but he lied
+'''
+
+re.findall(r'\d+', string) # Find me any number
+
+re.sub(r'\d+', 'X', string) # Find and replace, replace any number with X
+
+re.split(r'\d+', string) # String split 
+
+re.match(r'\d+', string) 
+
+```
+
+#### On the use of r
+
+You will often see the letter `r` before the string in regular expressions. This is to denote a raw string. This is important because it tells Python to ignore any special characters in the string. For example, if you want to match a backslash, you would need to use `\\` in a regular string. However, in a raw string, you can use `\`. 
+
+### pandas
+
+```{python}
+import pandas as pd
+
+example_df = pd.DataFrame(
+    {'text': [string]}
+)
+
+example_df['text'].str.findall(r'\d+')
+
+example_df['text'].str.replace(r'\d+', 'X')
+
+example_df['text'].str.split(r'\d+')
+
+example_df['text'].str.match(r'\d+')
+
+example_df['text'].str.extract(r'(\d+)')
+
+example_df['text'].str.extractall(r'(\d+)')
+
+example_df['text'].str.contains(r'\d+')
+
+example_df['text'].str.count(r'\d+')
+```
+
+
+```{python}
+import pandas as pd
+import pyarrow as pa 
+# In terminal pip3 install pyarrow 
+import re
+```
+
+```{python}
+test_strings = [
+    "Cant change the weatherMight not be forever",
+    "[Chorus] Say you can't sleep, baby, I know that's that me espresso [verse 1]",
+    " This 9 to 5 ain't  workin', why the hell do I work so hard? ",
+    "Where there's a will, then there's a way And I'm damn sure you lost it Embedded lyrics here", 
+    "https://www.billboard.com/charts/hot-100/2025-01-11/"
+]
+```
+
+
+```{python}
+lyrics_df = pd.DataFrame(
+    {"lyrics": test_strings})
+
+lyrics_df['lyrics']
+
+## Had to delete cause not working: 
+## lyrics_df = pd.DataFrame(
+##    {"lyrics": test_strings}), dtype=pd.ArrowDtype(pa.string()) 
+```
+
+## Examples
+
+### Removing Specific Words
+Removing the "Embedded lyrics here"
+```{python}
+lyrics_df['lyrics'].str.replace(r'Embedded.*$','', regex=True)[3]
+```
+
+### Removing Extra Space
+
+```{python}
+# Removing the double space 
+lyrics_df['lyrics'].str.replace(r'\s{2,}', ' ', regex=True)[2]
+
+# Removing the extra space at the beginning and end of the string
+lyrics_df['lyrics'].str.replace(r'^\s|\s$', '', regex=True)[2]
+```
+
+### Removing Bracketed Text
+
+```{python}
+lyrics_df['lyrics'].str.replace(r'\[.*?\]', '', regex=True)[1]
+```
+
+### Splitting Text
+
+Regular expressions are not zero based index not like python. 
+```{python}
+lyrics_df['lyrics'].str.replace('([a-z])([A-Z])', '\\1 \\2', regex=True)[0]
+```
+
+### Extracting Text
+https://www.billboard.com/charts/hot-100/2025-01-11/  want to extract hot100 out of this string
+find the pattern, hot-100 is after charts and before 4 numbers
+
+```{python}
+re.search('(?<=charts/).*(?=/\d{4})', lyrics_df['lyrics'][4]).group(0) 
+# Look arounds, get anything out of your data with them 
+```
+
+https://regexr.com is a good website to test regular expressions.
+
+## More Work
+
+```{python}
+all_lyrics = pd.read_feather(
+    '/Users/sberry5/Documents/teaching/UDA/code/lyrics_scrape_python/complete_lyrics_2025.feather', 
+    dtype_backend='pyarrow'
+)
+```
+
